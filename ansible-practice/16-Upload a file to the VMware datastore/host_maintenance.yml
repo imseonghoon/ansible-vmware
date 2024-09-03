@@ -1,0 +1,40 @@
+---
+- name: Put ESXi Host into Maintenance Mode
+  hosts: localhost
+  gather_facts: no
+  vars:
+    vcenter_hostname: "vc02.lab.iroo.int"
+    vcenter_username: "administrator@vsphere.local"
+    vcenter_password: "Ir00info1!"
+    vcenter_datacenter: "LvDC"
+    vcenter_cluster: "LvCL"
+    esxi_host: vl01.lab.iroo.int
+
+  tasks:
+    # - name: Enter ESXi Maintenance Mode
+    #   register: status
+    #   community.vmware.vmware_maintenancemode:
+    #     hostname: "{{ vcenter_hostname }}"
+    #     username: "{{ vcenter_username }}"
+    #     password: "{{ vcenter_password }}"
+    #     esxi_hostname: "{{ esxi_host }}"
+    #     validate_certs: no
+    #     evacuate: false   #Value true will migrate Powered Off VMs to other host
+    #     timeout: 3600     #Timeout for the operation (sec)
+    #     state: present
+ 
+    # - debug: var=status.msg
+
+    - name: Exit ESXi Maintenance Mode
+      register: status
+      community.vmware.vmware_maintenancemode:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        esxi_hostname: "{{ esxi_host }}"
+        validate_certs: no
+        evacuate: false   #Value true will migrate Powered Off VMs to other host
+        timeout: 3600     #Timeout for the operation (sec)
+        state: absent
+ 
+    - debug: var=status.msg

@@ -1,0 +1,22 @@
+---
+- name: vm vmotion demo
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - community.vmware
+  pre_tasks:
+    - include_vars: vars.yml
+  tasks:
+    - name: VM vmotion
+      vmware_vmotion:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        vm_name: "{{ vm_name }}"
+        destination_host: "{{ destination_host }}"
+      register: vm_info
+
+    - name: (vMotion 후) 현재 운영 중인 호스트
+      ansible.builtin.debug:
+        var: vm_info.running_host

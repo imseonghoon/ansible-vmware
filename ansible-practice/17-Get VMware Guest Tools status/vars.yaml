@@ -1,0 +1,15 @@
+---
+# vcenter_hostname: "vmware.example.com"
+# vcenter_datacenter: "vmwaredatacenter"
+# vcenter_validate_certs: false
+# vcenter_username: "username@vsphere.local"
+# vcenter_password: "MySecretPassword123"
+# vm_name: "myvm"
+
+vcenter_hostname: "vc02.lab.iroo.int"
+vcenter_datacenter: "LvDC"
+vcenter_cluster: "LvCL"
+vcenter_validate_certs: false
+vcenter_username: "administrator@vsphere.local"
+vcenter_password: "Ir00info1!"
+vm_name: "shim-AD-50.253-tanzukr.com"

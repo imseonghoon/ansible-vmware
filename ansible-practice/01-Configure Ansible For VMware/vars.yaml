@@ -1,0 +1,7 @@
+---
+vcenter_hostname: "vc02.lab.iroo.int"
+vcenter_datacenter: "LvDC"
+vcenter_validate_certs: false
+vcenter_username: "administrator@vsphere.local"
+vcenter_password: "Ir00info1!"
+vm_name: "shim-AD-50.253-tanzukr.com"

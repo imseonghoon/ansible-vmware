@@ -1,0 +1,8 @@
+---
+plugin: vmware_host_inventory
+strict: false
+hostname: vc02.lab.iroo.int
+username: administrator@vsphere.local
+password: "Ir00info1!"
+validate_certs: false
+with_tags: false

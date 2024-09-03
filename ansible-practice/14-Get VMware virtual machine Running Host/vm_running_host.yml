@@ -1,0 +1,63 @@
+---
+- name: vm running host demo
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - community.vmware
+  pre_tasks:
+    - include_vars: vars.yml
+  tasks:
+    - name: 특정 VM과 관련된 태그 및 카테고리에 대한 자세한 정보를 수집
+      vmware_guest_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ vcenter_datacenter }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        name: "{{ vm_name }}"
+      register: detailed_vm_info
+
+    - name: VM 정보 출력
+      ansible.builtin.debug:
+        var: detailed_vm_info
+        #var: detailed_vm_info.instance.hw_esxi_host
+
+    - name: Write debug message to result.txt
+      ansible.builtin.copy:
+        content: "{{ detailed_vm_info }}"
+        dest: "./result.json"
+
+    - name: Retrieve information about all VMs on a specific host
+      vmware_vm_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        vm_name: "{{ item.vm_name }}"
+      register: vm_info
+      delegate_to: localhost
+      loop: 
+        - { 'vm_name': 'shim-elasticsearch-01' } 
+        - { 'vm_name': 'shim-vcsa' } 
+
+    - name: Print the MOID of all VMs on the specified host
+      debug:
+        msg: "{{ vm_info }}"
+
+    # - name: Print the MOID of all VMs on the specified host
+    #   debug:
+    #     msg: "VM Name: {{ item}}"
+    #   loop: "{{ vm_info }}"
+
+    - name: Get VM info
+      vmware_guest_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ vcenter_datacenter }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        name: "{{ vm_name }}"
+      register: detailed_vm_info
+    - name: print VM Running Host
+      ansible.builtin.debug:
+        var: detailed_vm_info.instance.hw_esxi_host

@@ -1,0 +1,16 @@
+---
+vcenter_hostname: "vc02.lab.iroo.int"
+vcenter_datacenter: "LvDC"
+vcenter_cluster: "LvCL"
+vcenter_validate_certs: false
+vcenter_username: "administrator@vsphere.local"
+vcenter_password: "Ir00info1!"
+vm_name: "shim-vm-from-template"
+vm_folder: "CA"
+vm_disk_gb: 10
+vm_disk_type: "thin"
+vm_disk_datastore: "NETAPP_CA"
+vm_disk_scsi_controller: 1
+vm_disk_scsi_unit: 1
+vm_disk_scsi_type: 'paravirtual'
+vm_disk_mode: 'persistent'

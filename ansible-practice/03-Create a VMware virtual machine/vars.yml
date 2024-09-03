@@ -1,0 +1,19 @@
+---
+vcenter_hostname: "10.10.11.199"
+vcenter_datacenter: "LvDC"
+vcenter_validate_certs: false
+vcenter_username: "administrator@vsphere.local"
+vcenter_password: "Ir00info1!"
+vcenter_cluster: "LvCL"
+vm_name: "shim-ansible-test"
+vm_guestid: "centos64Guest"
+vm_disk_gb: 10
+vm_disk_type: "thin"
+vm_disk_datastore: "NETAPP_CA"
+vm_hw_ram_mb: 1024
+vm_hw_cpu_n: 1
+vm_hw_scsi: "paravirtual"
+vm_net_name: "DPG-CA-192.168.50.x"
+vm_net_type: "vmxnet3"
+vcenter_destination_folder: "CA"
+vm_state: "poweroff"

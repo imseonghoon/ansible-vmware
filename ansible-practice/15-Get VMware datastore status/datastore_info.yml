@@ -1,0 +1,29 @@
+---
+- name: datastore info demo
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - community.vmware
+  pre_tasks:
+    - include_vars: vars.yml
+  tasks:
+    - name: datastore info
+      vmware_datastore_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        datacenter_name: "{{ vcenter_datacenter }}"
+        name: "{{ vcenter_datastore }}"
+      register: datastore_info
+    - name: print datastore info
+      ansible.builtin.debug:
+        var: datastore_info
+    - name: print datastore info
+      ansible.builtin.debug:
+        msg: "{{datastore_info}}"
+      register: debug_output
+    - name: Write debug message to result.txt
+      ansible.builtin.copy:
+        content: "{{ debug_output.msg }}"
+        dest: "./result.txt"
