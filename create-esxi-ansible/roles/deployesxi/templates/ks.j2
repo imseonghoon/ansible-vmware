@@ -1,0 +1,51 @@
+# https://docs.vmware.com/kr/VMware-vSphere/8.0/vsphere-esxi-installation/GUID-51BD0186-50BF-4D0D-8410-79F165918B16.html 
+
+
+# VMware End User License Agreement 동의
+vmaccepteula
+
+# root password 설정
+rootpw "{{ nested_info_global.password }}"
+
+# local disk에 ESXi 설치
+install --firstdisk --overwritevmfs
+
+# Host 네트워크 설정
+# network --bootproto=dhcp --device=vmnic0
+network --bootproto=static --addvmportgroup=0 --ip={{ nested_info.staticip }} --netmask={{ nested_info_global.staticmask }} --gateway={{ nested_info_global.gateway }} --nameserver={{ nested_info_global.dns }} --hostname={{ nested_info.fqdn }} 
+
+# ESXi host 재부팅
+reboot
+
+# busybox 열기 및  and commands 실행
+%firstboot --interpreter=busybox
+
+# SSH를 위한 remote ESXi Shell 시작 및 활성화
+vim-cmd hostsvc/enable_ssh
+vim-cmd hostsvc/start_ssh
+
+# TSM을 위한 ESXi Shell 시작 및 활성화
+vim-cmd hostsvc/enable_esx_shell
+vim-cmd hostsvc/start_esx_shell
+
+# 라이선스가 있는 경우 자동으로 설치합니다.
+# vim-cmd vimsvc/license --set "license-key-here"
+
+# ESXi Shell 경고 무시
+esxcli system settings advanced set -o /UserVars/SuppressShellWarning -i 1
+
+# CEIP 비활성화
+esxcli system settings advanced set -o /UserVars/HostClientCEIPOptIn -i 2
+
+# DNS servers 구성
+esxcli network ip dns server add --server={{ nested_info_global.dns }}
+
+# certificate 재생성
+/sbin/generate-certificates
+
+# NTP 구성
+esxcli system ntp set -s={{ nested_info_global.ntpserver }}
+esxcli system ntp set -e=yes
+
+# ESXi host 재부팅
+reboot

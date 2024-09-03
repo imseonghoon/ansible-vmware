@@ -1,0 +1,50 @@
+- name: 데이터스토어의 파일 삭제 (shim-esxi01.iso)
+  community.vmware.vsphere_file:
+    hostname: "{{ vcenter_hostname }}"
+    username: "{{ vcenter_username }}"
+    password: "{{ vcenter_password }}"
+    validate_certs: false
+    datacenter: "LvDC"
+    datastore: "{{ vcenter_datastore }}"
+    path: "{{ nested_info[0].name }}.iso"
+    state: absent
+  register: info
+  ignore_errors: true
+
+- name: Print
+  debug:
+    msg: "{{ info }}"
+
+- name: 데이터스토어의 파일 삭제 (shim-esxi02.iso)
+  community.vmware.vsphere_file:
+    hostname: "{{ vcenter_hostname }}"
+    username: "{{ vcenter_username }}"
+    password: "{{ vcenter_password }}"
+    validate_certs: false
+    datacenter: "LvDC"
+    datastore: "{{ vcenter_datastore }}"
+    path: "{{ nested_info[1].name }}.iso"
+    state: absent
+  register: info
+  ignore_errors: true
+
+- name: Print
+  debug:
+    msg: "{{ info }}"
+
+- name: 데이터스토어의 파일 삭제 (shim-esxi03.iso)
+  community.vmware.vsphere_file:
+    hostname: "{{ vcenter_hostname }}"
+    username: "{{ vcenter_username }}"
+    password: "{{ vcenter_password }}"
+    validate_certs: false
+    datacenter: "LvDC"
+    datastore: "{{ vcenter_datastore }}"
+    path: "{{ nested_info[2].name }}.iso"
+    state: absent
+  register: info
+  ignore_errors: true
+
+- name: Print
+  debug:
+    msg: "{{ info }}"

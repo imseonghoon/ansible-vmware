@@ -1,0 +1,460 @@
+---
+- name: vCenter Automation - Create Datacenter, Cluster
+  hosts: localhost
+  gather_facts: true
+  collections:
+    - community.vmware
+
+  vars:
+    vcenter_hostname: "shim-vcsa.tanzukr.com"
+    vcenter_username: "administrator@vsphere.local"
+    vcenter_password: "Ir00info1!"
+    datacenter_name: "IrooDC"
+    cluster_name: "IrooCL"
+    vswitch_name: "vSwitch0"
+    portgroup_name: "Management_Network"
+    vlan_id: "50"
+
+    datastore_name: "NETAPP_CA"
+    datastore_type: "nfs"
+    nfs_server: "10.10.11.96"
+    nfs_path: "/nfs_CA"
+
+    esxi_hosts:
+      - "shim-esxi01.tanzukr.com"
+      - "shim-esxi02.tanzukr.com"
+      - "shim-esxi03.tanzukr.com"
+    esxi_ip:
+      - "192.168.50.241"
+      - "192.168.50.242"
+      - "192.168.50.243"
+    esxi_username: "root"
+    esxi_password: "Ir00info1!"
+    distributed_switch_name: "Iroo_vDS"
+    portgroups:
+      - name: "DPG-CA-192.168.50.x"
+        vlan_id: 50
+      - name: "DPG-CA-192.168.51.x"
+        vlan_id: 51
+      - name: "DPG-CA-192.168.52.x"
+        vlan_id: 52
+  tasks:
+
+    - name: Display the current time
+      ansible.builtin.debug:
+        msg: "The current time is {{ ansible_date_time.iso8601 }}"
+
+
+  ###################################################
+  # 데이터센터 생성
+  ###################################################
+    - name: 데이터센터 생성 （IrooDC）
+      community.vmware.vmware_datacenter:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        datacenter_name: "{{ datacenter_name }}"
+        state: present
+      delegate_to: localhost
+      register: datacenter_create_result
+    
+    - name: print result of Create Datacenter 
+      ansible.builtin.debug:
+        var: datacenter_create_result
+    
+    - name: 데이터 센터에 VM folder 생성 (IROO_CA)
+      community.vmware.vcenter_folder:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        validate_certs: no
+        datacenter_name: "{{ datacenter_name }}"
+        folder_name: IROO_CA
+        folder_type: vm
+        state: present
+      register: vm_folder_creation_result
+      delegate_to: localhost
+    
+    - name: 02. print result of Create a VM folder 
+      ansible.builtin.debug:
+        var: vm_folder_creation_result
+
+  ###################################################
+  # 클러스터 생성
+  ###################################################
+    - name: 클러스터 생성 (IrooCL)
+      community.vmware.vmware_cluster:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        datacenter_name: "{{ datacenter_name }}"
+        cluster_name: "{{ cluster_name }}"
+        state: present
+      delegate_to: localhost
+      register: cluster_create_result
+    
+    - name: print result of Create Cluster 
+      ansible.builtin.debug:
+        var: cluster_create_result
+
+
+
+
+  ###################################################
+  # 호스트 추가 
+  ###################################################
+    - name: 클러스터에 ESXi 호스트 추가 
+      community.vmware.vmware_host:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        cluster_name: "{{ cluster_name }}"
+        datacenter_name: "{{ datacenter_name }}"
+        esxi_hostname: "{{ item }}"
+        esxi_username: "{{ esxi_username }}"
+        esxi_password: "{{ esxi_password }}"
+        state: present
+      loop: "{{ esxi_hosts }}"
+      delegate_to: localhost
+
+    - name: esxi host가 연결될 때까지 5초 대기 
+      ansible.builtin.wait_for:
+        timeout: 5
+
+  # ###################################################
+  # # NFS 데이터스토어 생성
+  # ###################################################
+    - name: 모든 ESXi에 NFS 데이터스토어 마운트  (NETAPP_CA)
+      community.vmware.vmware_host_datastore:
+          hostname: '{{ vcenter_hostname }}'
+          username: '{{ vcenter_username }}'
+          password: '{{ vcenter_password }}'
+          validate_certs: no
+          datastore_name: '{{ item.name }}'
+          datastore_type: '{{ item.type }}'
+          nfs_server: '{{ item.server }}'
+          nfs_path: '{{ item.path }}'
+          nfs_ro: false
+          esxi_hostname: '{{ item.esxi_hosts }}'
+          state: present
+      delegate_to: localhost
+      loop:
+          - { 'esxi_hosts': 'shim-esxi01.tanzukr.com', 'name': 'NETAPP_CA', 'server': '10.10.11.96', 'path': '/nfs_CA', 'type': 'nfs'}
+          - { 'esxi_hosts': 'shim-esxi02.tanzukr.com', 'name': 'NETAPP_CA', 'server': '10.10.11.96', 'path': '/nfs_CA', 'type': 'nfs'}
+          - { 'esxi_hosts': 'shim-esxi03.tanzukr.com', 'name': 'NETAPP_CA', 'server': '10.10.11.96', 'path': '/nfs_CA', 'type': 'nfs'}
+      register: mount_nfs_datastore_result
+
+    - name: print result of Mount NFS datastores (NETAPP_CA)
+      ansible.builtin.debug:
+        var: mount_nfs_datastore_result
+    
+    - name: 모든 ESXi에 NFS 데이터스토어 마운트  (NETAPP_ISO)
+      community.vmware.vmware_host_datastore:
+          hostname: '{{ vcenter_hostname }}'
+          username: '{{ vcenter_username }}'
+          password: '{{ vcenter_password }}'
+          validate_certs: no
+          datastore_name: '{{ item.name }}'
+          datastore_type: '{{ item.type }}'
+          nfs_server: '{{ item.server }}'
+          nfs_path: '{{ item.path }}'
+          nfs_ro: false
+          esxi_hostname: '{{ item.esxi_hosts }}'
+          state: present
+      delegate_to: localhost
+      loop:
+          - { 'esxi_hosts': 'shim-esxi01.tanzukr.com', 'name': 'NETAPP_ISO', 'server': '10.10.11.95', 'path': '/nfs_ISO', 'type': 'nfs'}
+          - { 'esxi_hosts': 'shim-esxi02.tanzukr.com', 'name': 'NETAPP_ISO', 'server': '10.10.11.95', 'path': '/nfs_ISO', 'type': 'nfs'}
+          - { 'esxi_hosts': 'shim-esxi03.tanzukr.com', 'name': 'NETAPP_ISO', 'server': '10.10.11.95', 'path': '/nfs_ISO', 'type': 'nfs'}
+      register: mount_nfs_datastore_result
+    
+    - name: print result of Mount NFS datastore (NETAPP_ISO)
+      ansible.builtin.debug:
+        var: mount_nfs_datastore_result
+
+    - name: 종료 시각 확인
+      ansible.builtin.debug:
+        msg: "The current time is {{ ansible_date_time.iso8601 }}"
+
+
+
+
+
+
+
+  # ###################################################
+  # # dvSwitch 생성
+  # ###################################################
+  #   - name: 04. Create dvSwitch 
+  #     community.vmware.vmware_dvswitch:
+  #       hostname: '{{ vcenter_hostname }}'
+  #       username: '{{ vcenter_username }}'
+  #       password: '{{ vcenter_password }}'
+  #       validate_certs: no
+  #       datacenter: "{{ datacenter_name }}"
+  #       switch: dvSwitch
+  #       version: 8.0.3
+  #       mtu: 1500
+  #       uplink_quantity: 2
+  #       uplink_prefix: 'Uplink_'
+  #       discovery_protocol: cdp
+  #       discovery_operation: listen
+  #       state: present
+  #     delegate_to: localhost
+  #     register: dvSwitch_create_result
+
+  #   - name: 04. print result of Create dvSwitch 
+  #     ansible.builtin.debug:
+  #       var: dvSwitch_create_result
+
+  # ###################################################
+  # # vlan 포트그룹 생성
+  # ###################################################
+  #   - name: 05. Create vlan portgroup (DPG-CA-192.168.50.x)
+  #     community.vmware.vmware_dvs_portgroup:
+  #       hostname: '{{ vcenter_hostname }}'
+  #       username: '{{ vcenter_username }}'
+  #       password: '{{ vcenter_password }}'
+  #       validate_certs: no
+  #       portgroup_name: DPG-CA-192.168.50.x
+  #       switch_name: dvSwitch
+  #       vlan_id: 50
+  #       num_ports: 24
+  #       port_binding: static
+  #       state: present
+  #       network_policy:
+  #         inherited: false
+  #         promiscuous: true
+  #         forged_transmits: true
+  #         mac_changes: true
+  #     delegate_to: localhost
+  #     register: vlan_portgroup_create_result
+
+  #   - name: 05. print result of Create vlan portgroup(DPG-CA-192.168.50.x)
+  #     ansible.builtin.debug:
+  #       var: vlan_portgroup_create_result
+
+  #   - name: 06. Create vlan portgroup (DPG-CA-192.168.51.x)
+  #     community.vmware.vmware_dvs_portgroup:
+  #       hostname: '{{ vcenter_hostname }}'
+  #       username: '{{ vcenter_username }}'
+  #       password: '{{ vcenter_password }}'
+  #       validate_certs: no
+  #       portgroup_name: DPG-CA-192.168.51.x
+  #       switch_name: dvSwitch
+  #       vlan_id: 51
+  #       num_ports: 24
+  #       port_binding: static
+  #       state: present
+  #       network_policy:
+  #         inherited: false
+  #         promiscuous: true
+  #         forged_transmits: true
+  #         mac_changes: true
+  #     delegate_to: localhost
+  #     register: vlan_portgroup_create_result
+
+  #   - name: 06. print result of Create vlan portgroup(DPG-CA-192.168.51.x)
+  #     ansible.builtin.debug:
+  #       var: vlan_portgroup_create_result
+
+  #   - name: 07. Create vlan portgroup (DPG-CA-192.168.52.x)
+  #     community.vmware.vmware_dvs_portgroup:
+  #       hostname: '{{ vcenter_hostname }}'
+  #       username: '{{ vcenter_username }}'
+  #       password: '{{ vcenter_password }}'
+  #       validate_certs: no
+  #       portgroup_name: DPG-CA-192.168.52.x
+  #       switch_name: dvSwitch
+  #       vlan_id: 52
+  #       num_ports: 24
+  #       port_binding: static
+  #       state: present
+  #       network_policy:
+  #         inherited: false
+  #         promiscuous: true
+  #         forged_transmits: true
+  #         mac_changes: true
+  #     delegate_to: localhost
+  #     register: vlan_portgroup_create_result
+
+  #   - name: 07. print result of Create vlan portgroup(DPG-CA-192.168.52.x)
+  #     ansible.builtin.debug:
+  #       var: vlan_portgroup_create_result
+
+  # ###################################################
+  # # Distributed Switch에 물리 NIC 어댑터  추가
+  # ###################################################
+  #   - name: Add physical NIC to VDS uplink
+  #     community.vmware.vmware_dvs_host:
+  #       hostname: '{{ vcenter_hostname }}'
+  #       username: '{{ vcenter_username }}'
+  #       password: '{{ vcenter_password }}'
+  #       validate_certs: no
+  #       esxi_hostname: '{{ item.esxi_hosts }}'
+  #       switch_name: dvSwitch
+  #       vmnics:
+  #         - vmnic1
+  #         - vmnic2
+  #       state: present
+  #     delegate_to: localhost
+  #     loop:
+  #       - { 'esxi_hosts': 'shim-esxi01.tanzukr.com' }
+  #       - { 'esxi_hosts': 'shim-esxi02.tanzukr.com' }
+  #       - { 'esxi_hosts': 'shim-esxi03.tanzukr.com' }
+
+  # # ###################################################
+  # # # Management vmkernel port 추가
+  # # ###################################################
+
+  #   - name: Add Management vmkernel port to Distributed Switch
+  #     community.vmware.vmware_vmkernel:
+  #         hostname: '{{ vcenter_hostname }}'
+  #         username: '{{ vcenter_username }}'
+  #         password: '{{ vcenter_password }}'
+  #         validate_certs: no
+  #         esxi_hostname: '{{ item.esxi_hosts }}'
+  #         dvswitch_name: dvSwitch
+  #         portgroup_name: DPG-CA-192.168.50.x
+  #         network:
+  #           type: 'static'
+  #           ip_address: '{{ item.mgmt_ip }}'
+  #           subnet_mask: 255.255.255.0
+  #         state: present
+  #         enable_mgmt: true
+  #     delegate_to: localhost
+  #     loop:
+  #       - { 'esxi_hosts': 'shim-esxi01.tanzukr.com', 'mgmt_ip': '192.168.50.231' }
+  #       # - { 'esxi_hosts': 'shim-esxi02.tanzukr.com', 'mgmt_ip': '192.168.50.242' }
+  #       # - { 'esxi_hosts': 'shim-esxi03.tanzukr.com', 'mgmt_ip': '192.168.50.243' }
+
+  #   - name: Delete a VMware vSwitch in a specific host system
+  #     community.vmware.vmware_vswitch:
+  #       hostname: '{{ item.esxi_hostname }}'
+  #       username: '{{ item.esxi_username }}'
+  #       password: '{{ item.esxi_password }}'
+  #       validate_certs: no
+  #       esxi_hostname: '{{ item.esxi_hostname }}'
+  #       switch_name: vSwitch0
+  #       state: absent
+  #     delegate_to: localhost
+  #     loop:
+  #       - { 'esxi_hostname': 'shim-esxi01.tanzukr.com', 'esxi_username': 'root', 'esxi_password': 'Ir00info1!' }
+
+
+  # # ###################################################
+  # # # vMotion vmkernel port 추가
+  # # ###################################################
+
+    # - name: Add vMotion vmkernel port with vMotion TCP/IP stack (shim-esxi01.tanzukr.com)
+    #   community.vmware.vmware_vmkernel:
+    #       hostname: '{{ vcenter_hostname }}'
+    #       username: '{{ vcenter_username }}'
+    #       password: '{{ vcenter_password }}'
+    #       validate_certs: no
+    #       esxi_hostname: 'shim-esxi01.tanzukr.com'
+    #       dvswitch_name: dvSwitch
+    #       portgroup_name: DPG-CA-192.168.51.x 
+    #       network:
+    #         type: 'static'
+    #         ip_address: 192.168.51.241
+    #         subnet_mask: 255.255.255.0
+    #         default_gateway: 192.168.50.253
+    #         tcpip_stack: vmotion
+    #       state: present
+    #   delegate_to: localhost
+
+    # - name: Add vMotion vmkernel port with vMotion TCP/IP stack (shim-esxi02.tanzukr.com)
+    #   community.vmware.vmware_vmkernel:
+    #       hostname: '{{ vcenter_hostname }}'
+    #       username: '{{ vcenter_username }}'
+    #       password: '{{ vcenter_password }}'
+    #       validate_certs: no
+    #       esxi_hostname: 'shim-esxi02.tanzukr.com'
+    #       dvswitch_name: dvSwitch
+    #       portgroup_name: DPG-CA-192.168.51.x 
+    #       network:
+    #         type: 'static'
+    #         ip_address: 192.168.51.242
+    #         subnet_mask: 255.255.255.0
+    #         default_gateway: 192.168.50.253
+    #         tcpip_stack: vmotion
+    #       state: present
+    #   delegate_to: localhost
+
+    # - name: Add vMotion vmkernel port with vMotion TCP/IP stack (shim-esxi03.tanzukr.com)
+    #   community.vmware.vmware_vmkernel:
+    #       hostname: '{{ vcenter_hostname }}'
+    #       username: '{{ vcenter_username }}'
+    #       password: '{{ vcenter_password }}'
+    #       validate_certs: no
+    #       esxi_hostname: 'shim-esxi03.tanzukr.com'
+    #       dvswitch_name: dvSwitch
+    #       portgroup_name: DPG-CA-192.168.51.x 
+    #       network:
+    #         type: 'static'
+    #         ip_address: 192.168.51.243
+    #         subnet_mask: 255.255.255.0
+    #         default_gateway: 192.168.50.253
+    #         tcpip_stack: vmotion
+    #       state: present
+    #   delegate_to: localhost
+
+  # # ###################################################
+  # # # 호스트 Maintenance 해제
+  # # ###################################################
+    # - name: Enter Host Maintenance Mode
+    #   community.vmware.vmware_maintenancemode:
+    #     hostname: "{{ vcenter_hostname }}"
+    #     username: "{{ vcenter_username }}"
+    #     password: "{{ vcenter_password }}"
+    #     validate_certs: no
+    #     esxi_hostname: "{{ item.esxi_hosts }}"
+    #     state: absent
+    #   delegate_to: localhost
+    #   loop:
+    #     - { 'esxi_hosts': 'shim-esxi01.tanzukr.com' }
+    #     - { 'esxi_hosts': 'shim-esxi02.tanzukr.com' }
+    #     - { 'esxi_hosts': 'shim-esxi03.tanzukr.com' }
+
+
+  # # ###################################################
+  # # # Distributed Switch에 호스트 추가
+  # # ###################################################
+
+  #   - name: 11. Add Host to dVS
+  #     community.vmware.vmware_dvs_host:
+  #       hostname: '{{ vcenter_hostname }}'
+  #       username: '{{ vcenter_username }}'
+  #       password: '{{ vcenter_password }}'
+  #       validate_certs: no
+  #       esxi_hostname: '{{ item.esxi_hosts }}'
+  #       switch_name: dvSwitch
+  #       vmnics:
+  #           - vmnic0
+  #           - vmnic1
+  #       state: present
+  #     delegate_to: localhost
+  #     loop:
+  #       - { 'esxi_hosts': 'shim-esxi01.tanzukr.com' }
+  #       - { 'esxi_hosts': 'shim-esxi02.tanzukr.com' }
+  #       - { 'esxi_hosts': 'shim-esxi03.tanzukr.com' }
+
+    # - name: Create Distributed Portgroups
+    #   community.vmware.vmware_dvs_portgroup:
+    #     hostname: "{{ vcenter_hostname }}"
+    #     username: "{{ vcenter_username }}"
+    #     password: "{{ vcenter_password }}"
+    #     validate_certs: no
+    #     switch_name: "{{ distributed_switch_name }}"
+    #     datacenter_name: "{{ datacenter_name }}"
+    #     name: "{{ item.name }}"
+    #     vlan_id: "{{ item.vlan_id }}"
+    #     number_of_ports: 32
+    #     vlan_type: "vlan"
+    #     state: present
+    #   loop: "{{ portgroups }}"
+    #   delegate_to: localhost

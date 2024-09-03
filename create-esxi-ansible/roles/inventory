@@ -1,0 +1,14 @@
+all:
+  hosts:
+    shim-esxi01.tanzukr.com:
+    shim-esxi02.tanzukr.com:
+    shim-esxi03.tanzukr.com:
+  children:
+    esxi:
+      hosts:
+        shim-esxi01.tanzukr.com:
+        shim-esxi02.tanzukr.com:
+        shim-esxi03.tanzukr.com:
+    ansible:
+      hosts:
+        ansible-node01.tanzukr.com:

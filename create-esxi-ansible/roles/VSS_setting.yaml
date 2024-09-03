@@ -1,0 +1,219 @@
+---
+- name: vCenter Automation 
+  hosts: localhost
+  gather_facts: true
+  collections:
+    - community.vmware
+
+  vars:
+    vcenter_hostname: "shim-vcsa.tanzukr.com"
+    vcenter_username: "administrator@vsphere.local"
+    vcenter_password: "Ir00info1!"
+
+    esxi_username: "root"
+    esxi_password: "Ir00info1!"
+
+    datacenter_name: "IrooDC"
+    cluster_name: "IrooCL"
+    vswitch_name: "vSwitch0"
+    
+
+    datastore_name: "NETAPP_CA"
+    datastore_type: "nfs"
+    nfs_server: "10.10.11.96"
+    nfs_path: "/nfs_CA"
+
+    esxi_hostname:
+      - "shim-esxi01.tanzukr.com"
+      - "shim-esxi02.tanzukr.com"
+      - "shim-esxi03.tanzukr.com"
+    esxi_ip:
+      - "192.168.50.241"
+      - "192.168.50.242"
+      - "192.168.50.243"
+
+    distributed_switch_name: "Iroo_vDS"
+    portgroups:
+      - name: "DPG-CA-192.168.50.x"
+        vlan_id: 50
+      - name: "DPG-CA-192.168.51.x"
+        vlan_id: 51
+      - name: "DPG-CA-192.168.52.x"
+        vlan_id: 52
+  tasks:
+
+    - name: 시작 시간 확인
+      ansible.builtin.debug:
+        msg: "The current time is {{ ansible_date_time.iso8601 }}"
+
+    - name: ESXi 호스트 시스템의 포트 그룹 정보 수집
+      community.vmware.vmware_portgroup_info:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        cluster_name: '{{ cluster_name }}'
+        #esxi_hostname: '{{ esxi_hostname }}'
+        validate_certs: no
+      delegate_to: localhost
+      register: portgroup_info
+
+    - name: Display portgroup info
+      ansible.builtin.debug:
+        msg: "{{ portgroup_info.hosts_portgroup_info }}"
+
+  ###################################################
+  # VMware vSwitch multiple NICs 추가
+  ###################################################
+
+    - name: 다중 NIC로 구성된 VMware vSwitch 추가
+      community.vmware.vmware_vswitch:
+        hostname: '{{ item.esxi_hostname  }}'
+        username: '{{ esxi_username  }}'
+        password: '{{ esxi_password  }}'
+        validate_certs: no
+        switch: 'vSwitch0'
+        nics:
+        - vmnic0
+        - vmnic1
+        mtu: 9000
+        security:
+          promiscuous_mode: true
+          forged_transmits: true
+          mac_changes: true
+      delegate_to: localhost
+      loop:
+        - { 'esxi_hostname': 'shim-esxi01.tanzukr.com' }
+        - { 'esxi_hostname': 'shim-esxi02.tanzukr.com' }
+        - { 'esxi_hostname': 'shim-esxi03.tanzukr.com' }
+
+    - name: NIC가 모두 연결될 때까지 10초 대기 
+      ansible.builtin.wait_for:
+        timeout: 10
+
+  ###################################################
+  # VM Portgroup 추가 (VM Network)
+  ###################################################
+
+    - name: VM Portgroup 추가 (VM Network)
+      community.vmware.vmware_portgroup:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        esxi_hostname: "{{ item.esxi_hostname }}"
+        switch: "{{ vswitch_name }}"
+        portgroup: "{{ item.portgroup_name }}"
+        vlan_id: "{{ item.vlan_id }}"
+        security:
+            promiscuous_mode: true
+            mac_changes: true
+            forged_transmits: true
+        # traffic_shaping:
+        #     enabled: false
+        #     # average_bandwidth: 100000
+        #     # peak_bandwidth: 100000
+        #     # burst_size: 102400
+        teaming:
+            load_balancing: loadbalance_srcid
+            network_failure_detection: link_status_only
+            notify_switches: true
+            failback: true
+            active_adapters:
+                - vmnic0
+                - vmnic1
+            standby_adapters:                
+                
+      delegate_to: localhost
+      loop:
+        - { 'esxi_hostname': 'shim-esxi01.tanzukr.com', 'portgroup_name': 'VM Network', 'vlan_id': '50' }
+        - { 'esxi_hostname': 'shim-esxi02.tanzukr.com', 'portgroup_name': 'VM Network', 'vlan_id': '50' }
+        - { 'esxi_hostname': 'shim-esxi03.tanzukr.com', 'portgroup_name': 'VM Network', 'vlan_id': '50' }
+
+  ###################################################
+  # vMotion Portgroup 추가 (vMotion Network)
+  ###################################################
+
+    - name: vMotion Portgroup 추가 (vMotion Network)
+      community.vmware.vmware_portgroup:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        esxi_hostname: "{{ item.esxi_hostname }}"
+        switch: "{{ vswitch_name }}"
+        portgroup: "{{ item.portgroup_name }}"
+        vlan_id: "0"
+        security:
+            promiscuous_mode: true
+            mac_changes: true
+            forged_transmits: true
+        # traffic_shaping:
+        #     enabled: false
+        #     # average_bandwidth: 100000
+        #     # peak_bandwidth: 100000
+        #     # burst_size: 102400
+        teaming:
+            load_balancing: loadbalance_srcid
+            network_failure_detection: link_status_only
+            notify_switches: true
+            failback: true
+            active_adapters:
+                - vmnic0
+                - vmnic1
+            standby_adapters:                
+                
+      delegate_to: localhost
+      loop:
+        - { 'esxi_hostname': 'shim-esxi01.tanzukr.com', 'portgroup_name': 'vMotion Network' }
+        - { 'esxi_hostname': 'shim-esxi02.tanzukr.com', 'portgroup_name': 'vMotion Network' }
+        - { 'esxi_hostname': 'shim-esxi03.tanzukr.com', 'portgroup_name': 'vMotion Network' }
+
+
+
+  ###################################################
+  # vMotion vmkernel port 추가 
+  ###################################################
+    - name: vMotion vmkernel port 추가 
+      community.vmware.vmware_vmkernel:
+          hostname: '{{ vcenter_hostname }}'
+          username: '{{ vcenter_username }}'
+          password: '{{ vcenter_password }}'
+          esxi_hostname: '{{ item.esxi_hostname }}'
+          validate_certs: no
+          vswitch_name: 'vSwitch0'
+          portgroup_name: 'vMotion Network'
+          network:
+            type: 'static'
+            ip_address: '{{ item.ip_address }}'
+            subnet_mask: 255.255.255.0
+          state: present
+          enable_vmotion: true
+      delegate_to: localhost
+      loop:
+        - { 'esxi_hostname': 'shim-esxi01.tanzukr.com', 'ip_address': '192.168.51.241' }
+        - { 'esxi_hostname': 'shim-esxi02.tanzukr.com', 'ip_address': '192.168.51.242' }
+        - { 'esxi_hostname': 'shim-esxi03.tanzukr.com', 'ip_address': '192.168.51.243' }
+
+    - name: 종료 시각 확인
+      ansible.builtin.debug:
+        msg: "The current time is {{ ansible_date_time.iso8601 }}"
+
+   ##################################################
+   # Portgroup 제거
+   ##################################################
+
+    # - name: Remove Portgroup with all settings defined
+    #   community.vmware.vmware_portgroup:
+    #     hostname: "{{ vcenter_hostname }}"
+    #     username: "{{ vcenter_username }}"
+    #     password: "{{ vcenter_password }}"
+    #     validate_certs: no
+    #     esxi_hostname: "{{ item.esxi_hostname }}"
+    #     switch: "{{ vswitch_name }}"
+    #     portgroup: "DPG-CA-192.168.50.x"
+    #     state: absent
+    #   delegate_to: localhost
+    #   loop:
+    #     - { 'esxi_hostname': 'shim-esxi01.tanzukr.com' }
+    #     - { 'esxi_hostname': 'shim-esxi02.tanzukr.com' }
+    #     - { 'esxi_hostname': 'shim-esxi03.tanzukr.com' }

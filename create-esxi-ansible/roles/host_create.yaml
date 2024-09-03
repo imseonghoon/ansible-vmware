@@ -1,0 +1,43 @@
+##########################################################################################
+# 두 개의 ansible task로 구성되며 deployesxi 와 cleanup role을 호출하는 ansible playbook
+##########################################################################################
+---
+- name: KS.CFG 파일을 사용하여 ISO를 통해 중첩된 ESXi 환경 배포
+  hosts: localhost
+  gather_facts: true
+  collections:
+    - community.vmware
+  vars_files:
+    - "vars/creds.yaml"
+
+  tasks:
+
+    - name: 작업 시각 확인
+      ansible.builtin.debug:
+        msg: "The current time is {{ ansible_date_time.iso8601 }}"
+
+    - name: 중첩된 ESXi 호스트 생성 및 구성
+      include_role:
+        name: deployesxi
+      with_items: "{{ nested_info }}"
+      vars:
+        - physical_esxi_info: "{{ physical_esxi }}"
+        - nested_creds_info: "{{ nested_creds }}"
+      loop_control:
+        loop_var: nested_info
+
+    - name: VM들이 모두 실행될 때까지 10분 대기
+      ansible.builtin.wait_for:
+        timeout: 600
+
+    - name: physical esxi 파일 삭제
+      include_role:
+        name: cleanup
+      # with_items: "{{ nested_info }}"
+      # vars:
+      #   - physical_esxi_info: "{{ physical_esxi }}"
+      #   - nested_creds_info: "{{ nested_creds }}"
+      # loop_control:
+      #   loop_var: nested_item
+        
+# export ANSIBLE_HOST_KEY_CHECKING=False; ansible-playbook main.yaml -i hosts

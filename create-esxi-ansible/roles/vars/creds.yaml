@@ -1,0 +1,53 @@
+# ESXi VM들이 설치 될 물리서버 서버이름, 아이디, 비밀번호 및 데이터스토어 정의
+physical_esxi:
+  esxi_host: vl01.lab.iroo.int
+  esxi_username: root
+  esxi_password: "IrooVMw@re!0"
+  datastore_name: "NETAPP_CA"
+
+# 새로 구성할 ESXi 서버이름, ip 주소, FQDN 정의
+nested_info:
+  - name: shim-esxi01
+    staticip: 192.168.50.241
+    fqdn: shim-esxi01.tanzukr.com
+  - name: shim-esxi02
+    staticip: 192.168.50.242
+    fqdn: shim-esxi02.tanzukr.com
+  - name: shim-esxi03
+    staticip: 192.168.50.243
+    fqdn: shim-esxi03.tanzukr.com
+  # - name: shim-esxi04
+  #   staticip: 192.168.50.244
+  #   fqdn: shim-esxi04.tanzukr.com
+
+# 새로 구성할 ESXi 서버 구성 값 정의
+nested_info_global:
+  username: root
+  password: "Ir00info1!"
+  dns: 192.168.50.253
+  domain: tanzukr.com
+  gateway: 192.168.50.254
+  staticmask: 255.255.255.0
+  ntpserver: kr.pool.ntp.org
+  vlanid: 50
+  networks:
+    - name: "DPG-CA-192.168.50.x"
+    - name: "DPG-CA-192.168.50.x"
+    - name: "DPG-CA-192.168.51.x"
+    - name: "DPG-CA-192.168.51.x"
+  iso_location: "/home/iradmin/Automation/create-esxi-ansible/VMware-VMvisor-Installer-8.0U3-24022510.x86_64.iso"
+  esxi_cpu: 16
+  esxi_mem_mb: 32000
+
+# vCenter 서버 호스트 이름, 데이터센터, 클러스터, 아이디, 비밀번호 및 데이터 스토어 정의
+vcenter_hostname: "vc02.lab.iroo.int"
+vcenter_datacenter: "LvDC"
+vcenter_cluster: "LvDC"
+vcenter_validate_certs: false
+vcenter_username: "administrator@vsphere.local"
+vcenter_password: "Ir00info1!"
+vcenter_datastore: "NETAPP_CA"
+
+# ESXi 설치 이미지 경로
+mysrc: "VMware-VMvisor-Installer-8.0U3-24022510.x86_64.iso"
+mydest: "VMware-VMvisor-Installer-8.0U3-24022510.x86_64.iso"

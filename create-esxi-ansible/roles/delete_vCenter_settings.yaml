@@ -1,0 +1,474 @@
+---
+- name: vCenter Automation 환경 삭제
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - community.vmware
+
+  vars:
+    vcenter_hostname: "vc02.lab.iroo.int"
+    vcenter_username: "administrator@vsphere.local"
+    vcenter_password: "Ir00info1!"
+    datacenter_name: "IrooDC"
+    cluster_name: "IrooCL"
+    vswitch_name: "vSwitch0"
+    esxi_hosts:
+      - "shim-esxi01.tanzukr.com"
+      - "shim-esxi02.tanzukr.com"
+      - "shim-esxi03.tanzukr.com"
+    esxi_username: "root"
+    esxi_password: "Ir00info1!"
+
+    vm_name: "shim-ubuntu-server-from-ansible"
+
+
+    vcenter_datacenter: "LvDC"
+    vcenter_cluster: "LvCL"
+    vcenter_validate_certs: false
+
+
+    distributed_switch_name: "Iroo_vDS"
+    portgroups:
+      - name: "DPG-CA-192.168.50.x"
+        vlan_id: 50
+      - name: "DPG-CA-192.168.51.x"
+        vlan_id: 51
+      - name: "DPG-CA-192.168.52.x"
+        vlan_id: 52
+  tasks:
+
+  #   - name: ESXi 호스트 유지보수 모드 진입 
+  #     community.vmware.vmware_maintenancemode:
+  #       hostname: "{{ vcenter_hostname }}"
+  #       username: "{{ vcenter_username }}"
+  #       password: "{{ vcenter_password }}"
+  #       esxi_hostname: "{{ item.esxi_hostname }}"
+  #       validate_certs: no
+  #       evacuate: false
+  #       timeout: 3600
+  #       state: present
+  #     delegate_to: localhost
+  #     loop:
+  #         - { 'esxi_hostname': 'shim-esxi01.tanzukr.com'}
+  #         - { 'esxi_hostname': 'shim-esxi02.tanzukr.com'}
+  #         - { 'esxi_hostname': 'shim-esxi03.tanzukr.com'}
+
+
+
+  ##################################################
+  # VM Portgroup 제거 (VM Network)
+  ##################################################
+
+    # - name: VM Portgroup 제거 (VM Network)
+    #   community.vmware.vmware_portgroup:
+    #     hostname: "{{ vcenter_hostname }}"
+    #     username: "{{ vcenter_username }}"
+    #     password: "{{ vcenter_password }}"
+    #     cluster_name: "{{ cluster_name }}"
+    #     validate_certs: "{{ vcenter_validate_certs }}"
+    #     switch: "{{ vswitch_name }}"
+    #     portgroup: "{{ item.portgroup_name }}"
+    #     vlan_id: "{{ item.vlan_id }}"
+    #     state: absent
+    #   delegate_to: localhost
+    #   loop:
+    #     - { 'portgroup_name': 'VM Network', 'vlan_id': '50' }
+    #     - { 'portgroup_name': 'VM Network', 'vlan_id': '50' }
+    #     - { 'portgroup_name': 'VM Network', 'vlan_id': '50' }
+
+  # ###################################################
+  # # vMotion vmkernel port 제거 (vMotion Network)
+  # ###################################################
+  #   - name: vMotion vmkernel port 제거 (vMotion Network)
+  #     community.vmware.vmware_vmkernel:
+  #         hostname: '{{ vcenter_hostname }}'
+  #         username: '{{ vcenter_username }}'
+  #         password: '{{ vcenter_password }}'
+  #         esxi_hostname: '{{ item.esxi_hostname }}'
+  #         validate_certs: "{{ vcenter_validate_certs }}"
+  #         vswitch_name: 'vSwitch0'
+  #         portgroup_name: 'vMotion Network'
+  #         network:
+  #           type: 'static'
+  #           ip_address: '{{ item.ip_address }}'
+  #           subnet_mask: 255.255.255.0
+  #         state: absent
+  #         device: vmk1
+  #         enable_vmotion: true
+  #     delegate_to: localhost
+  #     loop:
+  #       - { 'esxi_hostname': 'shim-esxi01.tanzukr.com', 'ip_address': '192.168.51.241' }
+  #       - { 'esxi_hostname': 'shim-esxi02.tanzukr.com', 'ip_address': '192.168.51.242' }
+  #       - { 'esxi_hostname': 'shim-esxi03.tanzukr.com', 'ip_address': '192.168.51.243' }
+
+  # ##################################################
+  # # vMotion Portgroup 제거 (vMotion Network)
+  # ##################################################
+
+  #   - name: vMotion Portgroup 제거 (vMotion)
+  #     community.vmware.vmware_portgroup:
+  #       hostname: "{{ vcenter_hostname }}"
+  #       username: "{{ vcenter_username }}"
+  #       password: "{{ vcenter_password }}"
+  #       cluster_name: "{{ cluster_name }}"
+  #       validate_certs: "{{ vcenter_validate_certs }}"
+  #       switch: "{{ vswitch_name }}"
+  #       portgroup: "{{ item.portgroup_name }}"
+  #       state: absent
+  #     delegate_to: localhost
+  #     loop:
+  #       - { 'portgroup_name': 'vMotion Network' }
+  #       - { 'portgroup_name': 'vMotion Network' }
+  #       - { 'portgroup_name': 'vMotion Network' }
+
+    # - name: Gather all registered virtual machines
+    #   community.vmware.vmware_vm_info:
+    #     hostname: '{{ vcenter_hostname }}'
+    #     username: '{{ vcenter_username }}'
+    #     password: '{{ vcenter_password }}'
+    #     validate_certs: "{{ vcenter_validate_certs }}"
+    #   delegate_to: localhost
+    #   register: vminfo_all
+
+    # - name: print Gather all registered virtual machines
+    #   ansible.builtin.debug:
+    #     var: vminfo_all
+
+
+  # ##################################################
+  # # VM UUID 확인 및 vm 삭제
+  # ##################################################
+
+    # - name: VM UUID 확인
+    #   vmware_guest_info:
+    #     hostname: "{{ vcenter_hostname }}"
+    #     username: "{{ vcenter_username }}"
+    #     password: "{{ vcenter_password }}"
+    #     datacenter: "{{ vcenter_datacenter }}"
+    #     validate_certs: "{{ vcenter_validate_certs }}"
+    #     name: "{{ vm_name }}"
+    #   register: detailed_vm_info
+
+    # - name: print VM UUID
+    #   ansible.builtin.debug:
+    #     #var: detailed_vm_info.instance.hw_product_uuid
+    #     var: detailed_vm_info
+
+
+    # - name: Remove a virtual machine by uuid
+    #   community.vmware.vmware_guest:
+    #     hostname: "{{ vcenter_hostname }}"
+    #     username: "{{ vcenter_username }}"
+    #     password: "{{ vcenter_password }}"
+    #     validate_certs: no
+    #     uuid: "{{ detailed_vm_info.instance.hw_product_uuid }}"
+    #     state: absent
+    #   delegate_to: localhost
+
+  ##################################################
+  # 호스트 제거 
+  ##################################################
+    # - name: 클러스터에서 호스트 제거 
+    #   community.vmware.vmware_host:
+    #     hostname: "{{ vcenter_hostname }}"
+    #     username: "{{ vcenter_username }}"
+    #     password: "{{ vcenter_password }}"
+    #     validate_certs: no
+    #     cluster_name: "{{ cluster_name }}"
+    #     datacenter_name: "{{ datacenter_name }}"
+    #     esxi_hostname: "{{ item }}"
+    #     esxi_username: "{{ esxi_username }}"
+    #     esxi_password: "{{ esxi_password }}"
+    #     state: absent
+    #   loop: "{{ esxi_hosts }}"
+    #   delegate_to: localhost
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################################################################################################
+##################################      vDS일 경우 부분 (미완성)    ##################################
+######################################################################################################
+
+
+
+  # # ###################################################
+  # # # NFS 데이터스토어 제거
+  # # ###################################################
+  #   - name: NFS 데이터스토어 제거 (NETAPP_CA)
+  #     community.vmware.vmware_host_datastore:
+  #         hostname: '{{ vcenter_hostname }}'
+  #         username: '{{ vcenter_username }}'
+  #         password: '{{ vcenter_password }}'
+  #         validate_certs: "{{ vcenter_validate_certs }}"
+  #         datastore_name: '{{ item.name }}'
+  #         datastore_type: '{{ item.type }}'
+  #         nfs_server: '{{ item.server }}'
+  #         nfs_path: '{{ item.path }}'
+  #         nfs_ro: false
+  #         esxi_hostname: '{{ item.esxi_hosts }}'
+  #         state: absent
+  #     delegate_to: localhost
+  #     loop:
+  #         - { 'esxi_hosts': 'shim-esxi01.tanzukr.com', 'name': 'NETAPP_CA', 'server': '10.10.11.96', 'path': '/nfs_CA', 'type': 'nfs'}
+  #         - { 'esxi_hosts': 'shim-esxi02.tanzukr.com', 'name': 'NETAPP_CA', 'server': '10.10.11.96', 'path': '/nfs_CA', 'type': 'nfs'}
+  #         - { 'esxi_hosts': 'shim-esxi03.tanzukr.com', 'name': 'NETAPP_CA', 'server': '10.10.11.96', 'path': '/nfs_CA', 'type': 'nfs'}
+    
+  #   - name: NFS 데이터스토어 제거 (NETAPP_ISO)
+  #     community.vmware.vmware_host_datastore:
+  #         hostname: '{{ vcenter_hostname }}'
+  #         username: '{{ vcenter_username }}'
+  #         password: '{{ vcenter_password }}'
+  #         validate_certs: "{{ vcenter_validate_certs }}"
+  #         datastore_name: '{{ item.name }}'
+  #         datastore_type: '{{ item.type }}'
+  #         nfs_server: '{{ item.server }}'
+  #         nfs_path: '{{ item.path }}'
+  #         nfs_ro: false
+  #         esxi_hostname: '{{ item.esxi_hosts }}'
+  #         state: absent
+  #     delegate_to: localhost
+  #     loop:
+  #         - { 'esxi_hosts': 'shim-esxi01.tanzukr.com', 'name': 'NETAPP_ISO', 'server': '10.10.11.95', 'path': '/nfs_ISO', 'type': 'nfs'}
+  #         - { 'esxi_hosts': 'shim-esxi02.tanzukr.com', 'name': 'NETAPP_ISO', 'server': '10.10.11.95', 'path': '/nfs_ISO', 'type': 'nfs'}
+  #         - { 'esxi_hosts': 'shim-esxi03.tanzukr.com', 'name': 'NETAPP_ISO', 'server': '10.10.11.95', 'path': '/nfs_ISO', 'type': 'nfs'}
+
+
+  ###################################################
+  # VM folder(IROO_CA) 삭제
+  ###################################################
+
+    # - name: 데이터센터의 VM folder 제거
+    #   community.vmware.vcenter_folder:
+    #     hostname: '{{ vcenter_hostname }}'
+    #     username: '{{ vcenter_username }}'
+    #     password: '{{ vcenter_password }}'
+    #     validate_certs: "{{ vcenter_validate_certs }}"
+    #     datacenter_name: "{{ datacenter_name }}"
+    #     folder_name: IROO_CA
+    #     folder_type: vm
+    #     state: absent
+    #   register: vm_folder_delete_result
+    #   delegate_to: localhost
+    
+    # - name: 데이터센터의 VM folder 제거 확인
+    #   ansible.builtin.debug:
+    #     var: vm_folder_delete_result
+
+
+  # # ###################################################
+  # # # vMotion vmkernel port 제거
+  # # ###################################################
+
+    # - name: Remove vMotion vmkernel port with vMotion TCP/IP stack (shim-esxi01.tanzukr.com)
+    #   community.vmware.vmware_vmkernel:
+    #       hostname: '{{ vcenter_hostname }}'
+    #       username: '{{ vcenter_username }}'
+    #       password: '{{ vcenter_password }}'
+    #       validate_certs: no
+    #       esxi_hostname: 'shim-esxi01.tanzukr.com'
+    #       dvswitch_name: dvSwitch
+    #       portgroup_name: DPG-CA-192.168.51.x 
+    #       network:
+    #         type: 'static'
+    #         ip_address: 192.168.51.241
+    #         subnet_mask: 255.255.255.0
+    #         default_gateway: 192.168.50.253
+    #         tcpip_stack: vmotion
+    #       state: absent
+    #   delegate_to: localhost
+
+    # - name: Remove vMotion vmkernel port with vMotion TCP/IP stack (shim-esxi02.tanzukr.com)
+    #   community.vmware.vmware_vmkernel:
+    #       hostname: '{{ vcenter_hostname }}'
+    #       username: '{{ vcenter_username }}'
+    #       password: '{{ vcenter_password }}'
+    #       validate_certs: no
+    #       esxi_hostname: 'shim-esxi02.tanzukr.com'
+    #       dvswitch_name: dvSwitch
+    #       portgroup_name: DPG-CA-192.168.51.x 
+    #       network:
+    #         type: 'static'
+    #         ip_address: 192.168.51.242
+    #         subnet_mask: 255.255.255.0
+    #         default_gateway: 192.168.50.253
+    #         tcpip_stack: vmotion
+    #       state: absent
+    #   delegate_to: localhost
+
+    # - name: Remove vMotion vmkernel port with vMotion TCP/IP stack (shim-esxi03.tanzukr.com)
+    #   community.vmware.vmware_vmkernel:
+    #       hostname: '{{ vcenter_hostname }}'
+    #       username: '{{ vcenter_username }}'
+    #       password: '{{ vcenter_password }}'
+    #       validate_certs: no
+    #       esxi_hostname: 'shim-esxi03.tanzukr.com'
+    #       dvswitch_name: dvSwitch
+    #       portgroup_name: DPG-CA-192.168.51.x 
+    #       network:
+    #         type: 'static'
+    #         ip_address: 192.168.51.243
+    #         subnet_mask: 255.255.255.0
+    #         default_gateway: 192.168.50.253
+    #         tcpip_stack: vmotion
+    #       state: absent
+    #   delegate_to: localhost
+
+
+
+
+  # ###################################################
+  # # vlan 포트그룹 제거
+  # ###################################################
+  #   - name: 05. Remove vlan portgroup (DPG-CA-192.168.50.x)
+  #     community.vmware.vmware_dvs_portgroup:
+  #       hostname: '{{ vcenter_hostname }}'
+  #       username: '{{ vcenter_username }}'
+  #       password: '{{ vcenter_password }}'
+  #       validate_certs: no
+  #       portgroup_name: DPG-CA-192.168.50.x
+  #       switch_name: dvSwitch
+  #       vlan_id: 50
+  #       num_ports: 24
+  #       port_binding: static
+  #       state: absent
+  #       network_policy:
+  #         inherited: false
+  #         promiscuous: true
+  #         forged_transmits: true
+  #         mac_changes: true
+  #     delegate_to: localhost
+  #     register: vlan_portgroup_create_result
+
+  #   - name: 05. print result of Create vlan portgroup(DPG-CA-192.168.50.x)
+  #     ansible.builtin.debug:
+  #       var: vlan_portgroup_create_result
+
+  #   - name: 06. Remove vlan portgroup (DPG-CA-192.168.51.x)
+  #     community.vmware.vmware_dvs_portgroup:
+  #       hostname: '{{ vcenter_hostname }}'
+  #       username: '{{ vcenter_username }}'
+  #       password: '{{ vcenter_password }}'
+  #       validate_certs: no
+  #       portgroup_name: DPG-CA-192.168.51.x
+  #       switch_name: dvSwitch
+  #       vlan_id: 51
+  #       num_ports: 24
+  #       port_binding: static
+  #       state: absent
+  #       network_policy:
+  #         inherited: false
+  #         promiscuous: true
+  #         forged_transmits: true
+  #         mac_changes: true
+  #     delegate_to: localhost
+  #     register: vlan_portgroup_create_result
+
+  #   - name: 06. print result of Create vlan portgroup(DPG-CA-192.168.51.x)
+  #     ansible.builtin.debug:
+  #       var: vlan_portgroup_create_result
+
+  #   - name: 07. Remove vlan portgroup (DPG-CA-192.168.52.x)
+  #     community.vmware.vmware_dvs_portgroup:
+  #       hostname: '{{ vcenter_hostname }}'
+  #       username: '{{ vcenter_username }}'
+  #       password: '{{ vcenter_password }}'
+  #       validate_certs: no
+  #       portgroup_name: DPG-CA-192.168.52.x
+  #       switch_name: dvSwitch
+  #       vlan_id: 52
+  #       num_ports: 24
+  #       port_binding: static
+  #       state: absent
+  #       network_policy:
+  #         inherited: false
+  #         promiscuous: true
+  #         forged_transmits: true
+  #         mac_changes: true
+  #     delegate_to: localhost
+  #     register: vlan_portgroup_create_result
+
+  #   - name: 07. print result of Create vlan portgroup(DPG-CA-192.168.52.x)
+  #     ansible.builtin.debug:
+  #       var: vlan_portgroup_create_result
+
+  # ###################################################
+  # # dvSwitch 제거
+  # ###################################################
+  #   - name: 04. Remove dvSwitch 
+  #     community.vmware.vmware_dvswitch:
+  #       hostname: '{{ vcenter_hostname }}'
+  #       username: '{{ vcenter_username }}'
+  #       password: '{{ vcenter_password }}'
+  #       validate_certs: no
+  #       datacenter: "{{ datacenter_name }}"
+  #       switch: dvSwitch
+  #       version: 8.0.3
+  #       mtu: 1500
+  #       uplink_quantity: 2
+  #       uplink_prefix: 'Uplink_'
+  #       discovery_protocol: cdp
+  #       discovery_operation: listen
+  #       state: absent
+  #     delegate_to: localhost
+  #     register: dvSwitch_create_result
+
+  #   - name: 04. print result of Create dvSwitch 
+  #     ansible.builtin.debug:
+  #       var: dvSwitch_create_result
+
+
+
+
+
+  # ###################################################
+  # # 클러스터 삭제
+  # ###################################################
+  #   - name: 01. Delete Cluster
+  #     community.vmware.vmware_cluster:
+  #       hostname: "{{ vcenter_hostname }}"
+  #       username: "{{ vcenter_username }}"
+  #       password: "{{ vcenter_password }}"
+  #       validate_certs: no
+  #       datacenter_name: "{{ datacenter_name }}"
+  #       cluster_name: "{{ cluster_name }}"
+  #       state: absent
+  #     delegate_to: localhost
+  #     register: cluster_delete_result
+    
+  #   - name: 01. print result of Delete Cluster 
+  #     ansible.builtin.debug:
+  #       var: cluster_delete_result  
+
+
+
+  # ###################################################
+  # # 데이터센터 삭제
+  # ###################################################
+
+  #   - name: 03. Delete Datacenter
+  #     community.vmware.vmware_datacenter:
+  #       hostname: "{{ vcenter_hostname }}"
+  #       username: "{{ vcenter_username }}"
+  #       password: "{{ vcenter_password }}"
+  #       validate_certs: no
+  #       datacenter_name: "{{ datacenter_name }}"
+  #       state: absent
+  #     delegate_to: localhost
+  #     register: datacenter_delete_result
+    
+  #   - name: 03. print result of Delete Datacenter 
+  #     ansible.builtin.debug:
+  #       var: datacenter_delete_result
+    
+

@@ -1,0 +1,106 @@
+# https://docs.vmware.com/kr/VMware-vSphere/8.0/vsphere-esxi-upgrade/GUID-4E57A4D7-259D-4FA9-AA26-E0C71487A376.html
+
+- name: ISO 추출을 위한 임시 디렉토리 생성
+  ansible.builtin.file:
+    path: "/tmp/isoextract/KS"
+    state: directory
+    mode: "755"
+
+- name: 완성된 ISO 파일을 위한 임시 디렉토리 생성
+  ansible.builtin.file:
+    path: "/tmp/isofinished"
+    state: directory
+    mode: "755"
+
+- name: ESXi ISO 추출
+  ansible.builtin.command: "xorriso -osirrox on -indev {{ nested_info_global.iso_location }} -extract / /tmp/isoextract"
+  changed_when: false
+
+- name: 추출된 파일에 쓰기 권한 추가
+  ansible.builtin.file:
+    path: "/tmp/isoextract"
+    state: directory
+    recurse: true
+    mode: u+w
+
+- name: KS.CFG 파일을 삽입하기 위해 BOOT.CFG 파일 편집
+  ansible.builtin.replace:
+    dest: "{{ item }}"
+    regexp: 'kernelopt=.*'
+    replace: 'kernelopt=runweasel ks=cdrom:/KS/KS.CFG'
+  loop:
+    - "/tmp/isoextract/BOOT.CFG"
+    - "/tmp/isoextract/EFI/BOOT/BOOT.CFG"
+
+- name: 각 중첩된 ESXi 호스트에 대한 킥스타트 파일 생성
+  ansible.builtin.template:
+    src: "ks.j2"
+    dest: "/tmp/isoextract/KS/KS.CFG"
+    mode: "666"
+
+- name: 각 중첩된 ESXi 호스트에 대한 맞춤형 ESXi ISO 생성
+  ansible.builtin.command: "xorrisofs -relaxed-filenames -J -R -o /tmp/isofinished/{{ nested_info.name }}.iso \
+                          -b ISOLINUX.BIN -c BOOT.CAT -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFIBOOT.IMG -no-emul-boot /tmp/isoextract/"
+  args:
+    chdir: "/tmp/isoextract/"
+
+- name: 파일을 데이터스토어로 복사
+  vsphere_copy:
+    hostname: "{{ vcenter_hostname }}"
+    username: "{{ vcenter_username }}"
+    password: "{{ vcenter_password }}"
+    validate_certs: "{{ vcenter_validate_certs }}"
+    datacenter: "{{ vcenter_datacenter }}"
+    datastore: "{{ vcenter_datastore }}"
+    src: "/tmp/isofinished/{{ nested_info.name }}.iso"
+    path: "{{ nested_info.name }}.iso"
+
+- set_fact:
+    networklist: |-
+      [
+      {% for nw in nested_info_global.networks %}
+         {
+           "name": "{{ nw.name }}",
+           "state": "new"
+         },
+      {% endfor %}
+      ]
+
+- name:  Nested ESXi 호스트 배포
+  community.vmware.vmware_guest:
+    hostname: "{{ vcenter_hostname }}"
+    username: "{{ vcenter_username }}"
+    password: "{{ vcenter_password }}"
+    validate_certs: false
+    name: "{{ nested_info.name }}"
+    state: poweredon
+    guest_id: "vmkernel8Guest"
+    datacenter: "{{ vcenter_datacenter }}"
+    folder: '/CA/vmware'
+    disk:
+      - size_gb: 50
+        type: thin
+        datastore: "{{vcenter_datastore}}"
+        unit_number: 0
+        disk_mode: 'persistent'
+        controller_type: 'paravirtual'
+        controller_number: 0
+    hardware:
+      nested_virt: true
+      memory_mb: "{{ nested_info_global.esxi_mem_mb }}"
+      num_cpus: "{{ nested_info_global.esxi_cpu }}"
+    networks: "{{ networklist }}"
+    cdrom:
+      - controller_number: 0
+        unit_number: 0
+        type: iso
+        iso_path: "[NETAPP_CA] {{ nested_info.name }}.iso"
+        state: present
+
+- name: 로컬 파일 정리
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/isoextract/"
+    - "/tmp/isofinished/"
