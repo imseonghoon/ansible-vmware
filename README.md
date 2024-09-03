@@ -151,7 +151,4 @@ esxcli system ntp set -e=yes
 reboot
 ```
 
-# **수정해야 할 변수 정의**
 
-> Automation/create-esxi-ansible/vars/creds.yaml
->
