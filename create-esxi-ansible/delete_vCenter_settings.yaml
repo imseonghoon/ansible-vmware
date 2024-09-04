@@ -82,7 +82,7 @@
       debug:
         msg: " {{ vm_name }} 가상머신이 성공적으로 종료되었습니다."
 
-    - name: Remove a virtual machine by uuid
+    - name: UUID를 이용하여 해당 가상머신 삭제  
       community.vmware.vmware_guest:
         hostname: "{{ vcenter_hostname }}"
         username: "{{ vcenter_username }}"
@@ -158,7 +158,7 @@
         - { 'portgroup_name': 'vMotion Network' }
         - { 'portgroup_name': 'vMotion Network' }
 
-    - name: Gather all registered virtual machines
+    - name: 등록된 가상머신 정보 수집
       community.vmware.vmware_vm_info:
         hostname: '{{ vcenter_hostname }}'
         username: '{{ vcenter_username }}'
@@ -167,11 +167,9 @@
       delegate_to: localhost
       register: vminfo_all
 
-    - name: print Gather all registered virtual machines
+    - name: 등록된 가상머신 정보 수집 확인
       ansible.builtin.debug:
         var: vminfo_all
-
-
 
 
 
