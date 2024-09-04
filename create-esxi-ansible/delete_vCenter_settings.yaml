@@ -37,6 +37,60 @@
         vlan_id: 52
   tasks:
 
+  ##################################################
+  # VM UUID 확인 및 vm 삭제
+  ##################################################
+
+    - name: VM UUID 확인
+      vmware_guest_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ vcenter_datacenter }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        name: "{{ vm_name }}"
+      register: detailed_vm_info
+
+    - name: print VM UUID
+      ansible.builtin.debug:
+        #var: detailed_vm_info.instance.hw_product_uuid
+        var: detailed_vm_info
+
+    - name: 게스트 운영체제 종료
+      vmware_guest_powerstate:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        name: "{{ vm_name }}"
+        state: shutdown-guest
+        state_change_timeout: 120
+      register: shutdown
+      ignore_errors: true
+
+    - name: 전원 끄기
+      vmware_guest_powerstate:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        name: "{{ vm_name }}"
+        state: powered-off
+      when: shutdown.failed
+    
+    - name: Display VM details
+      debug:
+        msg: " {{ vm_name }} 가상머신이 성공적으로 종료되었습니다."
+
+    - name: Remove a virtual machine by uuid
+      community.vmware.vmware_guest:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        uuid: "{{ detailed_vm_info.instance.hw_product_uuid }}"
+        state: absent
+      delegate_to: localhost
 
   ##################################################
   # VM Portgroup 제거 (VM Network)
@@ -118,60 +172,7 @@
         var: vminfo_all
 
 
-  ##################################################
-  # VM UUID 확인 및 vm 삭제
-  ##################################################
 
-    - name: VM UUID 확인
-      vmware_guest_info:
-        hostname: "{{ vcenter_hostname }}"
-        username: "{{ vcenter_username }}"
-        password: "{{ vcenter_password }}"
-        datacenter: "{{ vcenter_datacenter }}"
-        validate_certs: "{{ vcenter_validate_certs }}"
-        name: "{{ vm_name }}"
-      register: detailed_vm_info
-
-    - name: print VM UUID
-      ansible.builtin.debug:
-        #var: detailed_vm_info.instance.hw_product_uuid
-        var: detailed_vm_info
-
-    - name: 게스트 운영체제 종료
-      vmware_guest_powerstate:
-        hostname: "{{ vcenter_hostname }}"
-        username: "{{ vcenter_username }}"
-        password: "{{ vcenter_password }}"
-        validate_certs: "{{ vcenter_validate_certs }}"
-        name: "{{ vm_name }}"
-        state: shutdown-guest
-        state_change_timeout: 120
-      register: shutdown
-      ignore_errors: true
-
-    - name: 전원 끄기
-      vmware_guest_powerstate:
-        hostname: "{{ vcenter_hostname }}"
-        username: "{{ vcenter_username }}"
-        password: "{{ vcenter_password }}"
-        validate_certs: "{{ vcenter_validate_certs }}"
-        name: "{{ vm_name }}"
-        state: powered-off
-      when: shutdown.failed
-    
-    - name: Display VM details
-      debug:
-        msg: " {{ vm_name }} 가상머신이 성공적으로 종료되었습니다."
-
-    - name: Remove a virtual machine by uuid
-      community.vmware.vmware_guest:
-        hostname: "{{ vcenter_hostname }}"
-        username: "{{ vcenter_username }}"
-        password: "{{ vcenter_password }}"
-        validate_certs: no
-        uuid: "{{ detailed_vm_info.instance.hw_product_uuid }}"
-        state: absent
-      delegate_to: localhost
 
 
     - name: ESXi 호스트 유지보수 모드 진입 
