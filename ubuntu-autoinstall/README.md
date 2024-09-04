@@ -9,6 +9,7 @@ ansible이 설치된 Bastion VM 또는 데스크톱이 우분투 리눅스라고
 ansible-bation VM 안에서 사용하는 경우, 다음의 명령을 실행하십시오. 
 
 * ```cd ubuntu-autoinstall```
+* ```mv /home/iradmin/iso/jammy-live-server-amd64.iso /home/iradmin/{{생성한 디렉토리}}/ansible-vmware/ubuntu-autoinstall/```
 * ```pip3 install --upgrade -r ./pip_requirements.txt```
 * ```ansible-galaxy collection install --upgrade -r requirements.yml```
 
