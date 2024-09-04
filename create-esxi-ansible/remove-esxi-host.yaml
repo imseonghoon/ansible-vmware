@@ -1,0 +1,176 @@
+---
+- name: esxi 호스트 가상머신 제거
+  hosts: localhost
+  gather_facts: true
+  collections:
+    - community.vmware
+  vars_files:
+    - "vars/creds.yaml"
+
+  tasks:
+
+    - name: 작업 시각 확인
+      ansible.builtin.debug:
+        msg: "The current time is {{ ansible_date_time.iso8601 }}"
+
+  # ##################################################
+  # # shim-esxi01 VM UUID 확인 및 vm 삭제
+  # ##################################################
+
+  #   - name: shim-esxi01 VM UUID 확인
+  #     vmware_guest_info:
+  #       hostname: "{{ vcenter_hostname }}"
+  #       username: "{{ vcenter_username }}"
+  #       password: "{{ vcenter_password }}"
+  #       datacenter: "{{ vcenter_datacenter }}"
+  #       validate_certs: "{{ vcenter_validate_certs }}"
+  #       name: "shim-esxi01"
+  #     register: detailed_vm_info
+
+  #   - name: shim-esxi01 게스트 운영체제 종료
+  #     vmware_guest_powerstate:
+  #       hostname: "{{ vcenter_hostname }}"
+  #       username: "{{ vcenter_username }}"
+  #       password: "{{ vcenter_password }}"
+  #       validate_certs: "{{ vcenter_validate_certs }}"
+  #       name: "shim-esxi01"
+  #       state: shutdown-guest
+  #       state_change_timeout: 60
+  #     register: shutdown
+  #     ignore_errors: true
+
+  #   - name: shim-esxi01 전원 끄기
+  #     vmware_guest_powerstate:
+  #       hostname: "{{ vcenter_hostname }}"
+  #       username: "{{ vcenter_username }}"
+  #       password: "{{ vcenter_password }}"
+  #       validate_certs: "{{ vcenter_validate_certs }}"
+  #       name: "shim-esxi01"
+  #       state: powered-off
+  #     when: shutdown.failed
+    
+  #   - name: Display VM details
+  #     debug:
+  #       msg: " shim-esxi01 가상머신이 성공적으로 종료되었습니다."
+
+  #   - name: UUID를 이용하여 해당 가상머신 삭제  
+  #     community.vmware.vmware_guest:
+  #       hostname: "{{ vcenter_hostname }}"
+  #       username: "{{ vcenter_username }}"
+  #       password: "{{ vcenter_password }}"
+  #       validate_certs: no
+  #       uuid: "{{ detailed_vm_info.instance.hw_product_uuid }}"
+  #       state: absent
+  #     delegate_to: localhost  
+
+  #   - name: Display VM details
+  #     debug:
+  #       msg: " shim-esxi01 가상머신이 성공적으로 삭제되었습니다."
+
+  ##################################################
+  # shim-esxi02 VM UUID 확인 및 vm 삭제
+  ##################################################
+
+    - name: shim-esxi02 VM UUID 확인
+      vmware_guest_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ vcenter_datacenter }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        name: "shim-esxi02"
+      register: detailed_vm_info
+
+    - name: shim-esxi02 게스트 운영체제 종료
+      vmware_guest_powerstate:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        name: "shim-esxi02"
+        state: shutdown-guest
+        state_change_timeout: 60
+      register: shutdown
+      ignore_errors: true
+
+    - name: shim-esxi02 전원 끄기
+      vmware_guest_powerstate:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        name: "shim-esxi02"
+        state: powered-off
+      when: shutdown.failed
+    
+    - name: Display VM details
+      debug:
+        msg: " shim-esxi02 가상머신이 성공적으로 종료되었습니다."
+
+    - name: UUID를 이용하여 해당 가상머신 삭제  
+      community.vmware.vmware_guest:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        uuid: "{{ detailed_vm_info.instance.hw_product_uuid }}"
+        state: absent
+      delegate_to: localhost  
+
+    - name: Display VM details
+      debug:
+        msg: " shim-esxi02 가상머신이 성공적으로 삭제되었습니다."
+
+  ##################################################
+  # shim-esxi03 VM UUID 확인 및 vm 삭제
+  ##################################################
+
+    - name: shim-esxi03 VM UUID 확인
+      vmware_guest_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ vcenter_datacenter }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        name: "shim-esxi03"
+      register: detailed_vm_info
+
+    - name: shim-esxi03 게스트 운영체제 종료
+      vmware_guest_powerstate:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        name: "shim-esxi03"
+        state: shutdown-guest
+        state_change_timeout: 60
+      register: shutdown
+      ignore_errors: true
+
+    - name: shim-esxi03 전원 끄기
+      vmware_guest_powerstate:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        name: "shim-esxi03"
+        state: powered-off
+      when: shutdown.failed
+    
+    - name: Display VM details
+      debug:
+        msg: " shim-esxi03 가상머신이 성공적으로 종료되었습니다."
+
+    - name: UUID를 이용하여 해당 가상머신 삭제  
+      community.vmware.vmware_guest:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        uuid: "{{ detailed_vm_info.instance.hw_product_uuid }}"
+        state: absent
+      delegate_to: localhost  
+
+    - name: Display VM details
+      debug:
+        msg: " shim-esxi03 가상머신이 성공적으로 삭제되었습니다."
