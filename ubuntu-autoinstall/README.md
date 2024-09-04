@@ -6,6 +6,13 @@ VMware vSphere 환경에서 Ubuntu Server 22.04 VM을 자동 설치하는 Ansibl
 ansible이 설치된 Bastion VM 또는 데스크톱이 우분투 리눅스라고 가정합니다. 만약 Redhat 계열을 사용한다면 apt가 아닌 dnf를 사용하면 됩니다.
 다음의 명령을 순차적으로 실행하십시오:
 
+ansible-bation VM 안에서 사용하는 경우, 다음의 명령을 실행하십시오. 
+
+* ```cd ubuntu-autoinstall```
+* ```pip3 install --upgrade -r ./pip_requirements.txt```
+* ```ansible-galaxy collection install --upgrade -r requirements.yml```
+
+ansible-bation VM을 사용하는 환경이 아닐 경우, 다음의 명령을 실행하십시오. 
 * ```sudo apt update && sudo apt install python3 python3-pip git p7zip-full xorriso```
 * ```git clone https://github.com/rutgerblom/ubuntu-autoinstall.git ~/git/ubuntu-autoinstall```
 * ```pip3 install --upgrade -r ~/git/ubuntu-autoinstall/pip_requirements.txt```
