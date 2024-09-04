@@ -35,7 +35,7 @@ nested_info_global:
     - name: "DPG-CA-192.168.50.x"
     - name: "DPG-CA-192.168.51.x"
     - name: "DPG-CA-192.168.51.x"
-  iso_location: "/home/iradmin/Automation/create-esxi-ansible/VMware-VMvisor-Installer-8.0U3-24022510.x86_64.iso"
+  iso_location: "/root/VMware-VMvisor-Installer-8.0U3-24022510.x86_64.iso"
   esxi_cpu: 16
   esxi_mem_mb: 32000
 
